@@ -17,6 +17,10 @@ export class Band {
   getLastShowYear() {
     return this.lastShow.getFullYear();
   }
+
+  getPopularGenre() {
+    return this.genres[0];
+  }
 }
 
 class BandRepository extends BaseFirestoreRepository<Band> {}
@@ -42,8 +46,8 @@ describe('BaseRepository', () => {
       expect(pt.name).to.equal('Porcupine Tree');
     });
     /*
-      Because of the useful generic type reflection of typescript this
-      test is not stable. Might be a good idea to revisit later.
+      <Sarcasm>Because of the useful generic type reflection of typescript</Sarcasm> 
+      this test is not stable. Might be a good idea to revisit later.
      */
     it('must return T');
     it('must have proper getters', async () => {
@@ -58,7 +62,18 @@ describe('BaseRepository', () => {
   });
 
   describe('create', () => {
-    it('should return T when an item is created');
+    it('should return T when an item is created', async () => {
+      const entity = new Band();
+      entity.id = 'rush';
+      entity.name = 'Rush';
+      entity.formationYear = 1968;
+      entity.genres = ['progressive-rock', 'hard-rock', 'heavy-metal'];
+
+      const band = await bandRepository.create(entity);
+      expect(band).to.be.instanceOf(Band);
+      expect(band.getPopularGenre()).to.equal('progressive-rock');
+    });
+
     it('must create items when id is passed', async () => {
       const entity = new Band();
       entity.id = 'perfect-circle';
@@ -113,7 +128,15 @@ describe('BaseRepository', () => {
   });
 
   describe('.where*', () => {
-    it('must return T[]');
+    it('must return T[]', async () => {
+      const progressiveRockBands = await bandRepository
+        .whereArrayContains('genres', 'progressive-rock')
+        .find();
+
+      progressiveRockBands.forEach(b => {
+        expect(b.getPopularGenre()).to.eql(b.genres[0]);
+      });
+    });
 
     it("must return same list if where filter doesn't apply", async () => {
       const list = await bandRepository
@@ -179,7 +202,7 @@ describe('BaseRepository', () => {
   describe('miscellanious', () => {
     it('should correctly parse dates', async () => {
       const pt = await bandRepository.findById('porcupine-tree');
-      expect(pt.lastShow).instanceOf(Date);
+      expect(pt.lastShow).to.be.instanceOf(Date);
       expect(pt.lastShow.toISOString()).to.equal('2010-10-14T00:00:00.000Z');
     });
   });
